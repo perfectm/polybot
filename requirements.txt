@@ -1,0 +1,35 @@
+# Discord Integration
+discord.py>=2.3.2
+
+# Polymarket API
+py-clob-client>=0.34.1
+
+# Database
+SQLAlchemy>=2.0.0
+alembic>=1.13.0
+
+# Configuration
+python-dotenv>=1.0.0
+PyYAML>=6.0.1
+
+# Async utilities
+aiohttp>=3.9.0
+asyncio-throttle>=1.0.2
+
+# Statistical analysis
+numpy>=1.26.0
+pandas>=2.1.0
+scikit-learn>=1.4.0
+
+# Logging
+python-json-logger>=2.0.7
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+
+# Code quality
+black>=23.12.0
+flake8>=6.1.0
+mypy>=1.7.0
