@@ -71,8 +71,6 @@ async def monitoring_loop(config, db, logger):
     """
     Main monitoring loop - polls Polymarket and detects suspicious activity.
 
-    This is a placeholder for Phase 4 implementation.
-
     Args:
         config: Configuration instance
         db: Database repository instance
@@ -81,11 +79,8 @@ async def monitoring_loop(config, db, logger):
     logger.info("Starting monitoring loop...")
     logger.info(f"Poll interval: {config.poll_interval_seconds} seconds")
 
-    # TODO: Phase 2 - Implement detection engine
-    # TODO: Phase 3 - Implement Discord integration
-    # TODO: Phase 4 - Implement full monitoring loop
-
     from monitoring.data_collector import PolymarketDataCollector
+    from detection.detection_orchestrator import DetectionOrchestrator
 
     # Initialize data collector
     collector = PolymarketDataCollector(
@@ -96,6 +91,22 @@ async def monitoring_loop(config, db, logger):
         backoff_factor=config.api_backoff_factor
     )
 
+    # Initialize detection orchestrator
+    detector = DetectionOrchestrator(
+        db=db,
+        large_bet_thresholds=config.get_large_bet_thresholds(),
+        volume_percentage_threshold=config.large_bet_volume_percentage,
+        statistical_sigma_threshold=config.large_bet_statistical_sigma,
+        rapid_succession_bet_count=config.rapid_succession_bet_count,
+        rapid_succession_time_window_minutes=config.rapid_succession_time_window_minutes,
+        z_score_threshold=config.statistical_anomaly_z_score,
+        iqr_multiplier=config.statistical_anomaly_iqr_multiplier,
+        new_account_threshold_hours=config.new_account_threshold_hours,
+        new_account_first_n_bets=config.new_account_first_n_bets,
+        new_account_large_bet_threshold=config.new_account_large_bet_threshold,
+        new_account_suspicious_first_bet_threshold=config.new_account_suspicious_first_bet_threshold
+    )
+
     # Health check
     is_healthy = await collector.health_check()
     if not is_healthy:
@@ -103,41 +114,66 @@ async def monitoring_loop(config, db, logger):
 
     # Main monitoring loop
     poll_count = 0
+    stats_update_interval = 5  # Update statistics every 5 polls
+
     while not shutdown_event.is_set():
         try:
             poll_count += 1
             logger.info(f"Poll #{poll_count}: Fetching markets and trades...")
+
+            # Update market statistics periodically
+            if poll_count % stats_update_interval == 0:
+                logger.info("Updating market statistics...")
+                updated = detector.update_market_statistics(max_markets=config.max_markets)
+                logger.info(f"Updated statistics for {updated} markets")
 
             # Fetch active markets
             markets = await collector.fetch_active_markets(limit=config.max_markets)
             logger.info(f"Found {len(markets)} active markets")
 
             # Store markets in database
-            for market in markets[:5]:  # Limit to top 5 for testing
+            for market in markets:
                 try:
                     db.upsert_market(market)
-                    logger.debug(f"Stored market: {market['question'][:50]}...")
                 except Exception as e:
                     logger.error(f"Error storing market: {e}")
 
-            # Fetch recent trades for top markets
+            # Fetch recent trades for markets
             if markets:
-                market_ids = [m['id'] for m in markets[:5]]
+                market_ids = [m['id'] for m in markets]
                 trades = await collector.fetch_all_recent_trades(
                     market_ids=market_ids,
-                    limit_per_market=10
+                    limit_per_market=20
                 )
                 logger.info(f"Found {len(trades)} recent trades")
 
-                # Store trades in database
-                for trade in trades[:20]:  # Limit for testing
+                # Process each trade through detection system
+                detections_count = 0
+                alerts_created = 0
+
+                for trade in trades:
                     try:
-                        db.insert_bet(trade)
-                        logger.debug(
-                            f"Stored bet: ${trade['size']:.2f} on {trade['market_id'][:10]}..."
-                        )
+                        # Store bet in database
+                        bet = db.insert_bet(trade)
+
+                        # Run detection on bet
+                        detection = detector.analyze_bet(bet)
+
+                        if detection:
+                            detections_count += 1
+                            # Create alert
+                            alert_id = detector.create_alert_from_detection(detection)
+                            if alert_id:
+                                alerts_created += 1
+
                     except Exception as e:
-                        logger.error(f"Error storing bet: {e}")
+                        logger.error(f"Error processing bet: {e}")
+
+                if detections_count > 0:
+                    logger.info(
+                        f"Poll #{poll_count}: Found {detections_count} detections, "
+                        f"created {alerts_created} alerts"
+                    )
 
             logger.info(f"Poll #{poll_count} complete. Waiting {config.poll_interval_seconds}s...")
 
@@ -163,23 +199,42 @@ async def discord_bot_loop(config, db, logger):
     """
     Discord bot loop - handles Discord connection and commands.
 
-    This is a placeholder for Phase 3 implementation.
-
     Args:
         config: Configuration instance
         db: Database repository instance
         logger: Logger instance
     """
-    logger.info("Discord bot loop placeholder (Phase 3)")
+    logger.info("Starting Discord bot...")
 
-    # TODO: Phase 3 - Implement Discord bot
-    # - Initialize discord.py bot
-    # - Connect to Discord
-    # - Register slash commands
-    # - Listen for unsent alerts and send them
+    from bot.discord_bot import PolymarketBot
 
-    # For now, just wait for shutdown
-    await shutdown_event.wait()
+    # Get color configuration
+    color_config = {
+        'critical': config.get_discord_embed_color('critical'),
+        'high': config.get_discord_embed_color('high'),
+        'medium': config.get_discord_embed_color('medium'),
+        'low': config.get_discord_embed_color('low'),
+    }
+
+    # Initialize bot
+    bot = PolymarketBot(
+        db=db,
+        alert_channel_id=config.discord_channel_id,
+        color_config=color_config
+    )
+
+    try:
+        # Start bot
+        logger.info("Connecting to Discord...")
+        await bot.start(config.discord_bot_token)
+
+    except Exception as e:
+        logger.error(f"Discord bot error: {e}", exc_info=True)
+
+    finally:
+        if not bot.is_closed():
+            await bot.shutdown()
+
     logger.info("Discord bot loop stopped")
 
 
@@ -202,7 +257,7 @@ async def main():
         # Run monitoring and Discord loops concurrently
         await asyncio.gather(
             monitoring_loop(config, db, logger),
-            # discord_bot_loop(config, db, logger),  # Enable in Phase 3
+            discord_bot_loop(config, db, logger),
             return_exceptions=True
         )
 
