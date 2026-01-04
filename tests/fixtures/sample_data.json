@@ -1,0 +1,44 @@
+{
+  "markets": [
+    {
+      "id": "0x1234567890abcdef",
+      "question": "Will Bitcoin reach $100k by end of 2026?",
+      "slug": "btc-100k-2026",
+      "total_volume": 1000000.0,
+      "active": true
+    },
+    {
+      "id": "0xabcdef1234567890",
+      "question": "Will ETH flip BTC in market cap?",
+      "slug": "eth-flip-btc",
+      "total_volume": 500000.0,
+      "active": true
+    }
+  ],
+  "normal_bets": [
+    {"size": 100, "description": "Small bet"},
+    {"size": 500, "description": "Small-medium bet"},
+    {"size": 1000, "description": "Medium bet"},
+    {"size": 2000, "description": "Medium bet"},
+    {"size": 3000, "description": "Medium bet"},
+    {"size": 4000, "description": "Medium bet"},
+    {"size": 5000, "description": "Medium-large bet"},
+    {"size": 7500, "description": "Large bet"}
+  ],
+  "large_bets": [
+    {"size": 15000, "description": "Above medium threshold"},
+    {"size": 55000, "description": "Above high threshold"},
+    {"size": 125000, "description": "Above critical threshold"}
+  ],
+  "rapid_succession_scenario": {
+    "address": "0xrapid123456789",
+    "market_id": "0x1234567890abcdef",
+    "bets": [
+      {"size": 5000, "timestamp_offset_seconds": 0},
+      {"size": 4500, "timestamp_offset_seconds": 30},
+      {"size": 6000, "timestamp_offset_seconds": 60},
+      {"size": 5500, "timestamp_offset_seconds": 120},
+      {"size": 7000, "timestamp_offset_seconds": 180}
+    ]
+  }
+}
