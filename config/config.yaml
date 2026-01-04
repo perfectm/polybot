@@ -36,6 +36,13 @@ detection:
     min_price_movement_pct: 5.0
     correlation_window_seconds: 60
 
+  new_account:
+    enabled: true
+    new_account_threshold_hours: 72  # 3 days
+    first_n_bets: 10
+    large_bet_threshold: 10000  # $10k
+    suspicious_first_bet_threshold: 50000  # $50k
+
 database:
   path: "data/polymarket.db"
   echo: false

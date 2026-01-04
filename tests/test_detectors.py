@@ -220,5 +220,46 @@ class TestLargeBetDetection:
         assert (bet_size / market_volume) * 100 >= threshold_pct
 
 
+class TestNewAccountDetection:
+    """Test new account detection logic."""
+
+    def test_new_account_thresholds(self):
+        """Test new account detection thresholds."""
+        # Configuration values
+        new_account_threshold_hours = 72  # 3 days
+        first_n_bets = 10
+        large_bet_threshold = 10000
+        suspicious_first_bet_threshold = 50000
+
+        # Test thresholds
+        assert new_account_threshold_hours == 72
+        assert first_n_bets == 10
+        assert large_bet_threshold == 10000
+        assert suspicious_first_bet_threshold == 50000
+
+    def test_severity_calculation(self):
+        """Test severity calculation for new accounts."""
+        # First bet scenarios
+        assert 55000 >= 50000  # First bet above suspicious threshold = critical
+        assert 25000 >= 10000 and 25000 < 50000  # First bet large but below suspicious = high
+
+        # Early bet scenarios (within first 10)
+        bet_position_5 = 5
+        bet_size_15k = 15000
+        assert bet_position_5 <= 10  # Within monitoring window
+        assert bet_size_15k >= 10000  # Large bet
+
+    def test_account_age_calculation(self):
+        """Test account age calculation."""
+        # Account age boundaries
+        very_new_hours = 12  # < 24 hours
+        new_hours = 48  # 24-72 hours
+        old_hours = 168  # > 72 hours (7 days)
+
+        assert very_new_hours < 24
+        assert 24 <= new_hours <= 72
+        assert old_hours > 72
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

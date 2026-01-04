@@ -174,6 +174,26 @@ class Config:
         """Get moving average window in hours for anomaly detection."""
         return self.get('detection.statistical_anomaly.ma_window_hours', 24)
 
+    @property
+    def new_account_threshold_hours(self) -> int:
+        """Get new account threshold in hours."""
+        return self.get('detection.new_account.new_account_threshold_hours', 72)
+
+    @property
+    def new_account_first_n_bets(self) -> int:
+        """Get number of first bets to monitor for new accounts."""
+        return self.get('detection.new_account.first_n_bets', 10)
+
+    @property
+    def new_account_large_bet_threshold(self) -> float:
+        """Get large bet threshold for new accounts."""
+        return self.get('detection.new_account.large_bet_threshold', 10000)
+
+    @property
+    def new_account_suspicious_first_bet_threshold(self) -> float:
+        """Get suspicious first bet threshold for new accounts."""
+        return self.get('detection.new_account.suspicious_first_bet_threshold', 50000)
+
     # API configuration
     @property
     def polymarket_base_url(self) -> str:
