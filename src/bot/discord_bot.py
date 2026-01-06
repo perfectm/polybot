@@ -11,9 +11,9 @@ import asyncio
 from typing import Optional, List
 from datetime import datetime, timedelta
 
-from ..database.repository import DatabaseRepository
-from .formatters import AlertFormatter
-from ..utils.logger import get_logger
+from database.repository import DatabaseRepository
+from bot.formatters import AlertFormatter
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 

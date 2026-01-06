@@ -206,33 +206,39 @@ async def discord_bot_loop(config, db, logger):
     """
     logger.info("Starting Discord bot...")
 
-    from bot.discord_bot import PolymarketBot
-
-    # Get color configuration
-    color_config = {
-        'critical': config.get_discord_embed_color('critical'),
-        'high': config.get_discord_embed_color('high'),
-        'medium': config.get_discord_embed_color('medium'),
-        'low': config.get_discord_embed_color('low'),
-    }
-
-    # Initialize bot
-    bot = PolymarketBot(
-        db=db,
-        alert_channel_id=config.discord_channel_id,
-        color_config=color_config
-    )
-
     try:
+        from bot.discord_bot import PolymarketBot
+        logger.info("Discord bot module imported")
+
+        # Get color configuration
+        color_config = {
+            'critical': config.get_discord_embed_color('critical'),
+            'high': config.get_discord_embed_color('high'),
+            'medium': config.get_discord_embed_color('medium'),
+            'low': config.get_discord_embed_color('low'),
+        }
+        logger.info("Color configuration loaded")
+
+        # Initialize bot
+        bot = PolymarketBot(
+            db=db,
+            alert_channel_id=config.discord_channel_id,
+            color_config=color_config
+        )
+        logger.info("Bot instance created")
+
         # Start bot
         logger.info("Connecting to Discord...")
+        token_preview = config.discord_bot_token[:20] + "..." if len(config.discord_bot_token) > 20 else "EMPTY_TOKEN"
+        logger.info(f"Using Discord token: {token_preview}")
+        logger.info(f"Alert channel ID: {config.discord_channel_id}")
         await bot.start(config.discord_bot_token)
 
     except Exception as e:
         logger.error(f"Discord bot error: {e}", exc_info=True)
 
     finally:
-        if not bot.is_closed():
+        if 'bot' in locals() and not bot.is_closed():
             await bot.shutdown()
 
     logger.info("Discord bot loop stopped")
@@ -262,16 +268,26 @@ async def main():
         )
 
     except KeyboardInterrupt:
-        logger.info("Keyboard interrupt received")
+        if 'logger' in locals():
+            logger.info("Keyboard interrupt received")
+        else:
+            print("Keyboard interrupt received")
     except Exception as e:
-        logger.error(f"Fatal error: {e}", exc_info=True)
+        if 'logger' in locals():
+            logger.error(f"Fatal error: {e}", exc_info=True)
+        else:
+            print(f"Fatal error during initialization: {e}", file=sys.stderr)
+            import traceback
+            traceback.print_exc()
         return 1
     finally:
         # Cleanup
-        logger.info("Shutting down...")
+        if 'logger' in locals():
+            logger.info("Shutting down...")
         if 'db' in locals():
             db.close()
-        logger.info("Shutdown complete")
+        if 'logger' in locals():
+            logger.info("Shutdown complete")
 
     return 0
 

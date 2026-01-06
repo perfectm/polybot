@@ -8,11 +8,11 @@ import logging
 import sys
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
-from pythonjsonlogger import jsonlogger
+from pythonjsonlogger.jsonlogger import JsonFormatter
 from typing import Optional
 
 
-class CustomJsonFormatter(jsonlogger.JsonFormatter):
+class CustomJsonFormatter(JsonFormatter):
     """Custom JSON formatter with additional fields."""
 
     def add_fields(self, log_record, record, message_dict):

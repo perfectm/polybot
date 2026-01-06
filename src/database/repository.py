@@ -6,13 +6,13 @@ Provides data access methods for all database operations.
 
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
-from sqlalchemy import create_engine, desc, and_, func
+from sqlalchemy import create_engine, desc, and_, func, text
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import SQLAlchemyError
 import json
 
 from .models import Base, Market, Bet, Alert, MarketStatistics, SystemState
-from ..utils.logger import get_logger
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -37,7 +37,8 @@ class DatabaseRepository:
 
         # Enable WAL mode for better concurrency
         with self.engine.connect() as conn:
-            conn.execute('PRAGMA journal_mode=WAL')
+            conn.execute(text('PRAGMA journal_mode=WAL'))
+            conn.commit()
 
         self.SessionLocal = sessionmaker(bind=self.engine)
 

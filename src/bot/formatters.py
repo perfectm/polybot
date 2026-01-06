@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 import json
 
-from ..utils.logger import get_logger
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
