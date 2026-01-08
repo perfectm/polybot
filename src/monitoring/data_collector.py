@@ -166,7 +166,7 @@ class PolymarketDataCollector:
         limit: int = 100
     ) -> List[Dict[str, Any]]:
         """
-        Fetch recent trades for a specific market.
+        Fetch recent trades for a specific market using the public Data API.
 
         Args:
             market_id: Market condition ID
@@ -177,25 +177,31 @@ class PolymarketDataCollector:
             List of trade dictionaries
         """
         try:
-            loop = asyncio.get_event_loop()
+            # Use the public Data API endpoint (no authentication required)
+            url = "https://data-api.polymarket.com/trades"
+            params = {
+                "market": market_id,
+                "limit": min(limit, 100),  # API allows up to 10,000 but we limit to 100
+                "offset": 0
+            }
 
-            # Fetch trades using py-clob-client
-            # Create TradeParams with market filter
-            params = TradeParams(market=market_id)
-            trades_raw = await loop.run_in_executor(
-                None,
-                lambda: self._get_client().get_trades(params=params)
-            )
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=self.timeout_seconds)) as response:
+                    if response.status != 200:
+                        logger.warning(f"Data API returned status {response.status} for market {market_id}")
+                        return []
+
+                    trades_raw = await response.json()
 
             if not trades_raw:
                 logger.debug(f"No trades found for market {market_id}")
                 return []
 
-            # Parse trades
+            # Parse trades from Data API format
             trades = []
-            for trade in trades_raw[:limit]:
+            for trade in trades_raw:
                 try:
-                    parsed_trade = self._parse_trade(trade, market_id)
+                    parsed_trade = self._parse_trade_from_data_api(trade, market_id)
                     if parsed_trade:
                         # Filter by timestamp if specified
                         if since and parsed_trade['timestamp'] < since:
@@ -212,9 +218,49 @@ class PolymarketDataCollector:
             logger.error(f"Error fetching trades for market {market_id}: {e}")
             return []
 
+    def _parse_trade_from_data_api(self, trade_raw: Any, market_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Parse trade data from the public Data API format.
+
+        Args:
+            trade_raw: Raw trade data from Data API
+            market_id: Market ID
+
+        Returns:
+            Parsed trade dictionary or None
+        """
+        try:
+            if isinstance(trade_raw, dict):
+                # Data API format: proxyWallet, side, size, price, timestamp, conditionId, etc
+                timestamp = self._parse_datetime(trade_raw.get('timestamp'))
+
+                # Calculate trade size in USD
+                price = float(trade_raw.get('price', 0.0))
+                size_tokens = float(trade_raw.get('size', 0.0))
+                size_usd = price * size_tokens  # Approximate USD value
+
+                return {
+                    'order_id': trade_raw.get('transactionHash', '')[:16],  # Use tx hash prefix as ID
+                    'market_id': trade_raw.get('conditionId', market_id),
+                    'address': trade_raw.get('proxyWallet', 'unknown'),
+                    'outcome': trade_raw.get('outcome', 'YES'),
+                    'size': size_usd,
+                    'price': price,
+                    'side': trade_raw.get('side', 'BUY').upper(),
+                    'timestamp': timestamp or datetime.utcnow(),
+                    'fee': 0.0,  # Data API doesn't include fees
+                    'asset_id': trade_raw.get('asset', ''),
+                }
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Error parsing trade data from Data API: {e}")
+            return None
+
     def _parse_trade(self, trade_raw: Any, market_id: str) -> Optional[Dict[str, Any]]:
         """
-        Parse raw trade data into standardized format.
+        Parse raw trade data from CLOB API into standardized format (deprecated - use Data API).
 
         Args:
             trade_raw: Raw trade data from API
@@ -335,30 +381,37 @@ class PolymarketDataCollector:
             logger.error(f"Error parsing orderbook: {e}")
             return {'bids': [], 'asks': [], 'timestamp': datetime.utcnow()}
 
-    def _parse_datetime(self, dt_string: Optional[str]) -> Optional[datetime]:
+    def _parse_datetime(self, dt_value) -> Optional[datetime]:
         """
-        Parse datetime string to datetime object.
+        Parse datetime from various formats (string, int, or float).
 
         Args:
-            dt_string: ISO format datetime string
+            dt_value: Datetime value (ISO string, Unix timestamp int/float/string)
 
         Returns:
             Datetime object or None
         """
-        if not dt_string:
+        if not dt_value:
             return None
 
         try:
-            # Try parsing ISO format
-            if 'T' in dt_string:
-                return datetime.fromisoformat(dt_string.replace('Z', '+00:00'))
-            # Try parsing unix timestamp
-            elif dt_string.isdigit():
-                return datetime.utcfromtimestamp(int(dt_string))
+            # Handle integer/float Unix timestamps directly
+            if isinstance(dt_value, (int, float)):
+                return datetime.utcfromtimestamp(dt_value)
+
+            # Handle string values
+            if isinstance(dt_value, str):
+                # Try parsing ISO format
+                if 'T' in dt_value:
+                    return datetime.fromisoformat(dt_value.replace('Z', '+00:00'))
+                # Try parsing unix timestamp string
+                elif dt_value.isdigit():
+                    return datetime.utcfromtimestamp(int(dt_value))
+
             return None
 
         except Exception as e:
-            logger.error(f"Error parsing datetime '{dt_string}': {e}")
+            logger.error(f"Error parsing datetime '{dt_value}': {e}")
             return None
 
     async def health_check(self) -> bool:
