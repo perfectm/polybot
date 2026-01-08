@@ -95,6 +95,16 @@ class Config:
         return os.getenv('POLYMARKET_API_KEY', '')
 
     @property
+    def polymarket_api_secret(self) -> str:
+        """Get Polymarket API secret from environment (optional)."""
+        return os.getenv('POLYMARKET_API_SECRET', '')
+
+    @property
+    def polymarket_passphrase(self) -> str:
+        """Get Polymarket API passphrase from environment (optional)."""
+        return os.getenv('POLYMARKET_PASSPHRASE', '')
+
+    @property
     def polymarket_private_key(self) -> str:
         """Get Polymarket private key from environment (optional)."""
         return os.getenv('POLYMARKET_PRIVATE_KEY', '')

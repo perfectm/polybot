@@ -8,7 +8,7 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 from py_clob_client.client import ClobClient
-from py_clob_client.clob_types import TradeParams
+from py_clob_client.clob_types import TradeParams, ApiCreds
 import aiohttp
 
 from utils.logger import get_logger
@@ -23,6 +23,8 @@ class PolymarketDataCollector:
         self,
         base_url: str = "https://clob.polymarket.com",
         api_key: Optional[str] = None,
+        api_secret: Optional[str] = None,
+        api_passphrase: Optional[str] = None,
         timeout_seconds: int = 30,
         max_retries: int = 3,
         backoff_factor: int = 2
@@ -33,12 +35,16 @@ class PolymarketDataCollector:
         Args:
             base_url: Polymarket CLOB API base URL
             api_key: Optional API key for authenticated requests
+            api_secret: Optional API secret for authenticated requests
+            api_passphrase: Optional API passphrase for authenticated requests
             timeout_seconds: Request timeout in seconds
             max_retries: Maximum number of retry attempts
             backoff_factor: Exponential backoff factor for retries
         """
         self.base_url = base_url
         self.api_key = api_key
+        self.api_secret = api_secret
+        self.api_passphrase = api_passphrase
         self.timeout_seconds = timeout_seconds
         self.max_retries = max_retries
         self.backoff_factor = backoff_factor
@@ -49,16 +55,31 @@ class PolymarketDataCollector:
     def _get_client(self) -> ClobClient:
         """Get or create the CLOB client (lazy initialization)."""
         if self.client is None:
-            # Only use API key if it's a valid hex string (starts with 0x)
-            # Otherwise use empty string for read-only access
-            api_key = self.api_key if (self.api_key and self.api_key.startswith('0x')) else ""
+            # Check if we have API credentials (key + secret + passphrase)
+            has_api_creds = self.api_key and self.api_secret and self.api_passphrase
 
-            self.client = ClobClient(
-                host=self.base_url,
-                key=api_key,
-                chain_id=137  # Polygon mainnet
-            )
-            logger.debug(f"CLOB client initialized (authenticated: {bool(api_key)})")
+            if has_api_creds:
+                # Use ApiCreds for authenticated access
+                creds = ApiCreds(
+                    api_key=self.api_key,
+                    api_secret=self.api_secret,
+                    api_passphrase=self.api_passphrase
+                )
+                self.client = ClobClient(
+                    host=self.base_url,
+                    key="",  # Empty for API creds mode
+                    chain_id=137,  # Polygon mainnet
+                    creds=creds
+                )
+                logger.info("CLOB client initialized with API credentials (authenticated)")
+            else:
+                # Read-only mode
+                self.client = ClobClient(
+                    host=self.base_url,
+                    key="",
+                    chain_id=137
+                )
+                logger.info("CLOB client initialized (read-only mode)")
         return self.client
 
     async def fetch_active_markets(self, limit: int = 50) -> List[Dict[str, Any]]:

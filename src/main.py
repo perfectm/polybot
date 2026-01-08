@@ -89,6 +89,8 @@ async def monitoring_loop(config, db, logger):
     collector = PolymarketDataCollector(
         base_url=config.polymarket_base_url,
         api_key=config.polymarket_api_key,
+        api_secret=config.polymarket_api_secret,
+        api_passphrase=config.polymarket_passphrase,
         timeout_seconds=config.api_timeout_seconds,
         max_retries=config.api_max_retries,
         backoff_factor=config.api_backoff_factor
