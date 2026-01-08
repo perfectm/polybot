@@ -79,10 +79,13 @@ async def monitoring_loop(config, db, logger):
     logger.info("Starting monitoring loop...")
     logger.info(f"Poll interval: {config.poll_interval_seconds} seconds")
 
+    logger.info("Importing monitoring modules...")
     from monitoring.data_collector import PolymarketDataCollector
     from detection.detection_orchestrator import DetectionOrchestrator
+    logger.info("Modules imported successfully")
 
     # Initialize data collector
+    logger.info("Initializing Polymarket data collector...")
     collector = PolymarketDataCollector(
         base_url=config.polymarket_base_url,
         api_key=config.polymarket_api_key,
@@ -90,8 +93,10 @@ async def monitoring_loop(config, db, logger):
         max_retries=config.api_max_retries,
         backoff_factor=config.api_backoff_factor
     )
+    logger.info("Data collector initialized")
 
     # Initialize detection orchestrator
+    logger.info("Initializing detection orchestrator...")
     detector = DetectionOrchestrator(
         db=db,
         large_bet_thresholds=config.get_large_bet_thresholds(),
@@ -106,8 +111,10 @@ async def monitoring_loop(config, db, logger):
         new_account_large_bet_threshold=config.new_account_large_bet_threshold,
         new_account_suspicious_first_bet_threshold=config.new_account_suspicious_first_bet_threshold
     )
+    logger.info("Detection orchestrator initialized")
 
     # Health check
+    logger.info("Performing Polymarket API health check...")
     is_healthy = await collector.health_check()
     if not is_healthy:
         logger.error("Polymarket API health check failed. Continuing anyway...")

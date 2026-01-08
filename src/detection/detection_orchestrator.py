@@ -9,13 +9,13 @@ from dataclasses import dataclass, asdict
 from datetime import datetime
 import json
 
-from ..database.repository import DatabaseRepository
-from ..database.models import Bet
-from .large_bet_detector import LargeBetDetector, LargeBetDetection
-from .pattern_detector import PatternDetector, PatternDetection
-from .new_account_detector import NewAccountDetector, NewAccountDetection
-from .statistics_calculator import MarketStatisticsCalculator
-from ..utils.logger import get_logger
+from database.repository import DatabaseRepository
+from database.models import Bet
+from detection.large_bet_detector import LargeBetDetector, LargeBetDetection
+from detection.pattern_detector import PatternDetector, PatternDetection
+from detection.new_account_detector import NewAccountDetector, NewAccountDetection
+from detection.statistics_calculator import MarketStatisticsCalculator
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 

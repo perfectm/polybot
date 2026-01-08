@@ -9,9 +9,9 @@ from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from ..database.repository import DatabaseRepository
-from ..database.models import Bet
-from ..utils.logger import get_logger
+from database.repository import DatabaseRepository
+from database.models import Bet
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 

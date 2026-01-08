@@ -8,9 +8,9 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 import numpy as np
 
-from ..database.repository import DatabaseRepository
-from ..database.models import Bet
-from ..utils.logger import get_logger
+from database.repository import DatabaseRepository
+from database.models import Bet
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 

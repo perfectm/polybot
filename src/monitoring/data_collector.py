@@ -8,10 +8,10 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 from py_clob_client.client import ClobClient
-from py_clob_client.clob_types import MarketOrderBookSummary
+from py_clob_client.clob_types import TradeParams
 import aiohttp
 
-from ..utils.logger import get_logger
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -42,15 +42,24 @@ class PolymarketDataCollector:
         self.timeout_seconds = timeout_seconds
         self.max_retries = max_retries
         self.backoff_factor = backoff_factor
-
-        # Initialize CLOB client (read-only mode)
-        self.client = ClobClient(
-            host=base_url,
-            key=api_key if api_key else "",  # Empty string for unauthenticated
-            chain_id=137  # Polygon mainnet
-        )
+        self.client = None  # Lazy initialization
 
         logger.info("Polymarket data collector initialized", extra={'base_url': base_url})
+
+    def _get_client(self) -> ClobClient:
+        """Get or create the CLOB client (lazy initialization)."""
+        if self.client is None:
+            # Only use API key if it's a valid hex string (starts with 0x)
+            # Otherwise use empty string for read-only access
+            api_key = self.api_key if (self.api_key and self.api_key.startswith('0x')) else ""
+
+            self.client = ClobClient(
+                host=self.base_url,
+                key=api_key,
+                chain_id=137  # Polygon mainnet
+            )
+            logger.debug(f"CLOB client initialized (authenticated: {bool(api_key)})")
+        return self.client
 
     async def fetch_active_markets(self, limit: int = 50) -> List[Dict[str, Any]]:
         """
@@ -68,7 +77,7 @@ class PolymarketDataCollector:
             # Get markets using py-clob-client (runs in thread pool since it's synchronous)
             markets_raw = await loop.run_in_executor(
                 None,
-                lambda: self.client.get_markets()
+                lambda: self._get_client().get_markets()
             )
 
             if not markets_raw:
@@ -77,7 +86,11 @@ class PolymarketDataCollector:
 
             # Parse and filter active markets
             markets = []
-            for market in markets_raw[:limit]:  # Limit results
+            # Handle both list and dict responses
+            market_list = markets_raw if isinstance(markets_raw, list) else markets_raw.get('data', [])
+            for i, market in enumerate(market_list):
+                if i >= limit:  # Limit results
+                    break
                 try:
                     parsed_market = self._parse_market(market)
                     if parsed_market:
@@ -146,9 +159,11 @@ class PolymarketDataCollector:
             loop = asyncio.get_event_loop()
 
             # Fetch trades using py-clob-client
+            # Create TradeParams with market filter
+            params = TradeParams(market=market_id)
             trades_raw = await loop.run_in_executor(
                 None,
-                lambda: self.client.get_trades(market=market_id)
+                lambda: self._get_client().get_trades(params=params)
             )
 
             if not trades_raw:
@@ -271,7 +286,7 @@ class PolymarketDataCollector:
 
             orderbook = await loop.run_in_executor(
                 None,
-                lambda: self.client.get_order_book(market_id)
+                lambda: self._get_client().get_order_book(market_id)
             )
 
             if not orderbook:

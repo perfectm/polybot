@@ -12,11 +12,11 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from collections import defaultdict
 
-from ..database.repository import DatabaseRepository
-from ..database.models import Bet
-from .anomaly_algorithms import ZScoreDetector, IQRDetector, calculate_statistics
-from .statistics_calculator import MarketStatisticsCalculator
-from ..utils.logger import get_logger
+from database.repository import DatabaseRepository
+from database.models import Bet
+from detection.anomaly_algorithms import ZScoreDetector, IQRDetector, calculate_statistics
+from detection.statistics_calculator import MarketStatisticsCalculator
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 

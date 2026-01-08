@@ -11,11 +11,11 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from datetime import datetime
 
-from ..database.repository import DatabaseRepository
-from ..database.models import Bet
-from .anomaly_algorithms import is_outlier_by_zscore
-from .statistics_calculator import MarketStatisticsCalculator
-from ..utils.logger import get_logger
+from database.repository import DatabaseRepository
+from database.models import Bet
+from detection.anomaly_algorithms import is_outlier_by_zscore
+from detection.statistics_calculator import MarketStatisticsCalculator
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
