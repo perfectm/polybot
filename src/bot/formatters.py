@@ -77,6 +77,26 @@ class AlertFormatter:
             inline=True
         )
 
+        # Bet timestamp - Parse and format the bet placement time
+        timestamp_str = details.get('timestamp', '')
+        bet_time_display = "Unknown"
+        if timestamp_str:
+            try:
+                # Parse ISO format timestamp
+                if isinstance(timestamp_str, str):
+                    bet_time = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                    # Format as readable date/time
+                    bet_time_display = bet_time.strftime("%Y-%m-%d %H:%M:%S UTC")
+            except Exception as e:
+                logger.warning(f"Error parsing timestamp: {e}")
+                bet_time_display = timestamp_str
+
+        embed.add_field(
+            name="🕐 Bet Placed At",
+            value=f"**{bet_time_display}**",
+            inline=True
+        )
+
         # Wallet address (shortened)
         short_address = f"{address[:6]}...{address[-4:]}" if len(address) > 10 else address
         embed.add_field(
@@ -142,8 +162,7 @@ class AlertFormatter:
             )
 
         # Footer
-        timestamp_str = details.get('timestamp', '')
-        embed.set_footer(text=f"Alert ID: #{alert_data.get('id', 0)} • {timestamp_str}")
+        embed.set_footer(text=f"Alert ID: #{alert_data.get('id', 0)}")
 
         return embed
 
@@ -208,6 +227,24 @@ class AlertFormatter:
         embed.add_field(
             name="💰 Bet Size",
             value=f"**${bet_size:,.2f}**",
+            inline=True
+        )
+
+        # Bet timestamp
+        timestamp_str = details.get('timestamp', '')
+        bet_time_display = "Unknown"
+        if timestamp_str:
+            try:
+                if isinstance(timestamp_str, str):
+                    bet_time = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                    bet_time_display = bet_time.strftime("%Y-%m-%d %H:%M:%S UTC")
+            except Exception as e:
+                logger.warning(f"Error parsing timestamp: {e}")
+                bet_time_display = timestamp_str
+
+        embed.add_field(
+            name="🕐 Bet Placed At",
+            value=f"**{bet_time_display}**",
             inline=True
         )
 
@@ -329,6 +366,24 @@ class AlertFormatter:
                     inline=False
                 )
 
+        # Bet timestamp
+        timestamp_str = details.get('timestamp', '')
+        bet_time_display = "Unknown"
+        if timestamp_str:
+            try:
+                if isinstance(timestamp_str, str):
+                    bet_time = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                    bet_time_display = bet_time.strftime("%Y-%m-%d %H:%M:%S UTC")
+            except Exception as e:
+                logger.warning(f"Error parsing timestamp: {e}")
+                bet_time_display = timestamp_str
+
+        embed.add_field(
+            name="🕐 Bet Placed At",
+            value=f"**{bet_time_display}**",
+            inline=True
+        )
+
         # Wallet address
         short_address = f"{address[:6]}...{address[-4:]}" if len(address) > 10 else address
         embed.add_field(
@@ -411,6 +466,24 @@ class AlertFormatter:
         embed.add_field(
             name="⚠️ Severity",
             value=f"**{severity.upper()}**",
+            inline=True
+        )
+
+        # Bet timestamp
+        timestamp_str = details.get('timestamp', '')
+        bet_time_display = "Unknown"
+        if timestamp_str:
+            try:
+                if isinstance(timestamp_str, str):
+                    bet_time = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                    bet_time_display = bet_time.strftime("%Y-%m-%d %H:%M:%S UTC")
+            except Exception as e:
+                logger.warning(f"Error parsing timestamp: {e}")
+                bet_time_display = timestamp_str
+
+        embed.add_field(
+            name="🕐 Bet Placed At",
+            value=f"**{bet_time_display}**",
             inline=True
         )
 
