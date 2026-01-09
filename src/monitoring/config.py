@@ -148,7 +148,7 @@ class Config:
     @property
     def min_bet_date(self) -> str:
         """Get minimum bet date to process (ISO format)."""
-        return self.get('monitoring.filters.min_date', '2024-12-01')
+        return self.get('monitoring.filters.min_date', '2025-12-01')
 
     # Detection configuration
     def get_large_bet_thresholds(self) -> Dict[str, float]:
