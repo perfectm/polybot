@@ -159,9 +159,28 @@ async def monitoring_loop(config, db, logger):
                 # Process each trade through detection system
                 detections_count = 0
                 alerts_created = 0
+                filtered_count = 0
+
+                # Parse minimum date filter
+                from datetime import datetime as dt
+                min_date = dt.fromisoformat(config.min_bet_date)
 
                 for trade in trades:
                     try:
+                        # Apply filters before processing
+                        bet_size = trade.get('size', 0)
+                        bet_timestamp = trade.get('timestamp')
+
+                        # Filter 1: Minimum bet size
+                        if bet_size < config.min_bet_size:
+                            filtered_count += 1
+                            continue
+
+                        # Filter 2: Minimum date (skip old transactions)
+                        if bet_timestamp and bet_timestamp < min_date:
+                            filtered_count += 1
+                            continue
+
                         # Store bet in database
                         bet = db.insert_bet(trade)
 
@@ -177,6 +196,9 @@ async def monitoring_loop(config, db, logger):
 
                     except Exception as e:
                         logger.error(f"Error processing bet: {e}")
+
+                if filtered_count > 0:
+                    logger.info(f"Filtered out {filtered_count} trades (below ${config.min_bet_size} or before {config.min_bet_date})")
 
                 if detections_count > 0:
                     logger.info(

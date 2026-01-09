@@ -3,6 +3,11 @@ monitoring:
   batch_size: 100
   max_markets: 50
 
+  # Filtering to reduce noise
+  filters:
+    min_bet_size: 500           # Only process bets >= $500
+    min_date: "2024-12-01"      # Only process bets from December 2024 onwards
+
 detection:
   large_bet:
     enabled: true

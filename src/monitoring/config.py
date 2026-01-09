@@ -140,6 +140,16 @@ class Config:
         """Get maximum number of markets to monitor."""
         return self.get('monitoring.max_markets', 50)
 
+    @property
+    def min_bet_size(self) -> float:
+        """Get minimum bet size to process (in USD)."""
+        return self.get('monitoring.filters.min_bet_size', 500.0)
+
+    @property
+    def min_bet_date(self) -> str:
+        """Get minimum bet date to process (ISO format)."""
+        return self.get('monitoring.filters.min_date', '2024-12-01')
+
     # Detection configuration
     def get_large_bet_thresholds(self) -> Dict[str, float]:
         """Get large bet detection thresholds."""
