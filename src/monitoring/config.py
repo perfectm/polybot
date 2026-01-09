@@ -254,6 +254,31 @@ class Config:
         }
         return color_map.get(severity.lower(), 0x808080)  # Default gray
 
+    @property
+    def discord_rate_limit_enabled(self) -> bool:
+        """Get whether Discord rate limiting is enabled."""
+        return self.get('discord.rate_limiting.enabled', True)
+
+    @property
+    def discord_max_alerts_per_hour(self) -> int:
+        """Get maximum alerts per hour."""
+        return self.get('discord.rate_limiting.max_alerts_per_hour', 60)
+
+    @property
+    def discord_max_alerts_per_batch(self) -> int:
+        """Get maximum alerts per batch."""
+        return self.get('discord.rate_limiting.max_alerts_per_batch', 2)
+
+    @property
+    def discord_check_interval_seconds(self) -> int:
+        """Get alert check interval in seconds."""
+        return self.get('discord.rate_limiting.check_interval_seconds', 60)
+
+    @property
+    def discord_delay_between_alerts(self) -> int:
+        """Get delay between individual alerts in seconds."""
+        return self.get('discord.rate_limiting.delay_between_alerts', 15)
+
     # Database configuration
     @property
     def database_echo(self) -> bool:

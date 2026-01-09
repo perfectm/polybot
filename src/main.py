@@ -228,13 +228,19 @@ async def discord_bot_loop(config, db, logger):
         }
         logger.info("Color configuration loaded")
 
-        # Initialize bot
+        # Initialize bot with rate limiting config
         bot = PolymarketBot(
             db=db,
             alert_channel_id=config.discord_channel_id,
-            color_config=color_config
+            color_config=color_config,
+            max_alerts_per_hour=config.discord_max_alerts_per_hour,
+            max_alerts_per_batch=config.discord_max_alerts_per_batch,
+            delay_between_alerts=config.discord_delay_between_alerts
         )
         logger.info("Bot instance created")
+        logger.info(f"Rate limiting: {config.discord_max_alerts_per_hour} alerts/hour max, "
+                   f"{config.discord_max_alerts_per_batch} per batch, "
+                   f"{config.discord_delay_between_alerts}s delay")
 
         # Start bot
         logger.info("Connecting to Discord...")

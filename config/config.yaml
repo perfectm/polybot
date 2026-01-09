@@ -50,6 +50,14 @@ database:
   max_overflow: 10
 
 discord:
+  # Rate limiting to prevent channel spam
+  rate_limiting:
+    enabled: true
+    max_alerts_per_hour: 60      # Maximum alerts per hour (1 per minute average)
+    max_alerts_per_batch: 2      # Alerts sent per check cycle
+    check_interval_seconds: 60   # How often to check for new alerts
+    delay_between_alerts: 15     # Seconds to wait between sending individual alerts
+
   embed_color:
     critical: 0xFF0000  # Red
     high: 0xFF6B35      # Orange

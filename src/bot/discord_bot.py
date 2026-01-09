@@ -25,7 +25,10 @@ class PolymarketBot(discord.Client):
         self,
         db: DatabaseRepository,
         alert_channel_id: int,
-        color_config: Optional[dict] = None
+        color_config: Optional[dict] = None,
+        max_alerts_per_hour: int = 60,
+        max_alerts_per_batch: int = 2,
+        delay_between_alerts: int = 15
     ):
         """
         Initialize Polymarket Discord bot.
@@ -34,6 +37,9 @@ class PolymarketBot(discord.Client):
             db: Database repository
             alert_channel_id: Discord channel ID for alerts
             color_config: Color configuration for embeds
+            max_alerts_per_hour: Maximum alerts per hour (default: 60)
+            max_alerts_per_batch: Maximum alerts per check cycle (default: 2)
+            delay_between_alerts: Seconds between individual alerts (default: 15)
         """
         # Set up intents
         intents = discord.Intents.default()
@@ -53,7 +59,15 @@ class PolymarketBot(discord.Client):
         self.alerts_sent = 0
         self.errors_count = 0
 
-        logger.info("Polymarket bot initialized")
+        # Rate limiting (configurable)
+        self.alerts_sent_last_hour = []  # Track timestamps of sent alerts
+        self.max_alerts_per_hour = max_alerts_per_hour
+        self.max_alerts_per_batch = max_alerts_per_batch
+        self.delay_between_alerts = delay_between_alerts
+
+        logger.info(f"Polymarket bot initialized with rate limiting: "
+                   f"{max_alerts_per_hour}/hour, {max_alerts_per_batch}/batch, "
+                   f"{delay_between_alerts}s delay")
 
     async def setup_hook(self):
         """Set up bot commands and tasks."""
@@ -329,19 +343,60 @@ class PolymarketBot(discord.Client):
             logger.error(f"Error handling alerts command: {e}", exc_info=True)
             await interaction.followup.send("Error retrieving alerts", ephemeral=True)
 
-    @tasks.loop(seconds=10)
+    @tasks.loop(seconds=60)  # Check every 60 seconds instead of 10
     async def check_alerts_task(self):
-        """Background task to check for unsent alerts."""
+        """Background task to check for unsent alerts with rate limiting."""
         if not self.is_ready or not self.alert_channel:
             return
 
         try:
-            # Get unsent alerts
-            unsent_alerts = self.db.get_unsent_alerts(limit=10)
+            # Clean up old timestamps (older than 1 hour)
+            now = datetime.utcnow()
+            self.alerts_sent_last_hour = [
+                ts for ts in self.alerts_sent_last_hour
+                if (now - ts).total_seconds() < 3600
+            ]
 
-            for alert in unsent_alerts:
+            # Check if we've hit the hourly limit
+            alerts_remaining = self.max_alerts_per_hour - len(self.alerts_sent_last_hour)
+            if alerts_remaining <= 0:
+                logger.warning(f"Rate limit reached: {self.max_alerts_per_hour} alerts sent in last hour")
+                return
+
+            # Get unsent alerts, prioritizing by severity
+            # Limit to max_alerts_per_batch and remaining hourly quota
+            fetch_limit = min(self.max_alerts_per_batch, alerts_remaining)
+            unsent_alerts = self.db.get_unsent_alerts(limit=fetch_limit)
+
+            # Filter and sort by severity (critical, high, medium, low)
+            severity_priority = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
+            unsent_alerts_sorted = sorted(
+                unsent_alerts,
+                key=lambda a: severity_priority.get(a.severity, 999)
+            )
+
+            # Send alerts with rate limiting
+            for i, alert in enumerate(unsent_alerts_sorted):
+                # Check hourly limit before each send
+                if len(self.alerts_sent_last_hour) >= self.max_alerts_per_hour:
+                    logger.warning("Hourly rate limit reached mid-batch, stopping")
+                    break
+
                 await self.send_alert(alert)
-                await asyncio.sleep(1)  # Rate limiting
+
+                # Record timestamp
+                self.alerts_sent_last_hour.append(datetime.utcnow())
+
+                # Wait before next alert (except for last one)
+                if i < len(unsent_alerts_sorted) - 1:
+                    await asyncio.sleep(self.delay_between_alerts)
+
+            # Log rate limit status
+            if unsent_alerts:
+                logger.info(
+                    f"Rate limiter: {len(self.alerts_sent_last_hour)}/{self.max_alerts_per_hour} "
+                    f"alerts sent in last hour"
+                )
 
         except Exception as e:
             logger.error(f"Error in check_alerts task: {e}", exc_info=True)
