@@ -420,7 +420,18 @@ class PolymarketBot(discord.Client):
 
             # Get market info
             market = self.db.get_market(alert.market_id)
-            market_question = market.question if market else "Unknown Market"
+
+            # Skip alerts for unknown markets (market not found in database)
+            if not market:
+                logger.warning(
+                    f"Skipping alert #{alert.id}: Market not found in database",
+                    extra={'alert_id': alert.id, 'market_id': alert.market_id}
+                )
+                # Mark as sent so we don't keep trying to send it
+                self.db.mark_alert_sent(alert.id, discord_message_id="skipped_unknown_market")
+                return
+
+            market_question = market.question
 
             # Format alert
             alert_data = {

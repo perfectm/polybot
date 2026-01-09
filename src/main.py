@@ -160,6 +160,7 @@ async def monitoring_loop(config, db, logger):
                 detections_count = 0
                 alerts_created = 0
                 filtered_count = 0
+                duplicate_count = 0
 
                 # Parse minimum date filter
                 from datetime import datetime as dt
@@ -181,8 +182,13 @@ async def monitoring_loop(config, db, logger):
                             filtered_count += 1
                             continue
 
-                        # Store bet in database
-                        bet = db.insert_bet(trade)
+                        # Store bet in database (returns tuple: bet, is_new)
+                        bet, is_new = db.insert_bet(trade)
+
+                        # Only run detection on NEW bets to avoid duplicate alerts
+                        if not is_new:
+                            duplicate_count += 1
+                            continue
 
                         # Run detection on bet
                         detection = detector.analyze_bet(bet)
@@ -199,6 +205,9 @@ async def monitoring_loop(config, db, logger):
 
                 if filtered_count > 0:
                     logger.info(f"Filtered out {filtered_count} trades (below ${config.min_bet_size} or before {config.min_bet_date})")
+
+                if duplicate_count > 0:
+                    logger.info(f"Skipped {duplicate_count} duplicate trades (already processed)")
 
                 if detections_count > 0:
                     logger.info(

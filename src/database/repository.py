@@ -115,7 +115,7 @@ class DatabaseRepository:
             session.close()
 
     # Bet operations
-    def insert_bet(self, bet_data: Dict[str, Any]) -> Bet:
+    def insert_bet(self, bet_data: Dict[str, Any]) -> tuple[Bet, bool]:
         """
         Insert new bet.
 
@@ -123,7 +123,7 @@ class DatabaseRepository:
             bet_data: Bet data dictionary
 
         Returns:
-            Bet instance
+            Tuple of (Bet instance, is_new boolean)
         """
         session = self.get_session()
         try:
@@ -131,13 +131,13 @@ class DatabaseRepository:
             existing = session.query(Bet).filter_by(order_id=bet_data['order_id']).first()
             if existing:
                 logger.debug(f"Bet already exists: {bet_data['order_id']}")
-                return existing
+                return existing, False
 
             bet = Bet(**bet_data)
             session.add(bet)
             session.commit()
             session.refresh(bet)
-            return bet
+            return bet, True
 
         except SQLAlchemyError as e:
             session.rollback()
